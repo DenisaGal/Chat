@@ -10,7 +10,7 @@ A simple server for the chat
 #include <netinet/ip.h>
 #include <stdlib.h>
 
-#define PORT 5555 // some port for the server 
+#define PORT 556 // some port for the server 
 #define backlog 3
 
 #define FAILED_SOCKET 1
@@ -49,16 +49,25 @@ int main()
 	}
 	
 	int adresslen = sizeof (server_address) ;
-	
-	int new_socket_fd = accept(server_socket_fd, //wait for a connection from the client  
-	(struct sockaddr *) &server_address , (socklen_t *) &adresslen);
-	
-	if(new_socket_fd < 0)
-	{	
-		perror("accept failed");
-		exit(FAILED_ACCEPT); // client - server connection is the problem 
+	while(1)
+	{
+		
+		int new_socket_fd = accept(server_socket_fd, //wait for a connection from the client  
+			(struct sockaddr *) &server_address , (socklen_t *) &adresslen);
+			
+		if(new_socket_fd < 0)
+		{	
+			perror("accept failed");			
+			exit(FAILED_ACCEPT); // client - server connection is the problem 
+		}
+		
+		/* 
+			Should make the server concurent with fork
+			
+		*/
+		
+		printf("Conexiune din partea clientului \n");
 	}
-	
 	
 	
 	printf("Server End\n");
