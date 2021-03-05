@@ -10,13 +10,16 @@ A simple server for the chat
 #include <netinet/ip.h>
 #include <stdlib.h>
 
-#define PORT 5555 // some port for the server 
+#define PORT 556 // some port for the server 
 #define backlog 3
 
 #define FAILED_SOCKET 1
 #define FAILED_BIND 2
 #define FAILED_LISTEN 3
 #define FAILED_ACCEPT 4
+#define FAILED_CHILD 5
+
+#define MESSAGE_LEN 1024
 
 
 int main()
@@ -49,16 +52,57 @@ int main()
 	}
 	
 	int adresslen = sizeof (server_address) ;
-	
-	int new_socket_fd = accept(server_socket_fd, //wait for a connection from the client  
-	(struct sockaddr *) &server_address , (socklen_t *) &adresslen);
-	
-	if(new_socket_fd < 0)
-	{	
-		perror("accept failed");
-		exit(FAILED_ACCEPT); // client - server connection is the problem 
+	int new_socket_fd;
+
+	char message[MESSAGE_LEN];
+
+	while(new_socket_fd = accept(server_socket_fd, (struct sockaddr *) &server_address, (socklen_t *) &adresslen))
+	//wait for a connection from the client
+	{
+		if(new_socket_fd < 0)
+		{	
+			perror("accept failed");			
+			exit(FAILED_ACCEPT); // client - server connection is the problem 
+		}
+
+		//Concurrent server= we shall use a child process for each user
+		int cpid;
+
+		//------------------------------<Child>----------------------
+		if( (cpid=fork())==0 )
+		{
+			printf("Conexiune din partea clientului \n");
+			//Child has connected
+
+			close(server_socket_fd);
+			//child does not need to listen
+
+			bzero(message, MESSAGE_LEN);
+
+			while(int n = recv(new_socket_fd, message, sizeof(message),0)) > 0 )
+			{
+				printf("Message from someone: %s", message);
+				//print here
+
+				send(new_socket_fd, message, strlen(message), 0);
+				//send to all
+
+				bzero(message, MESSAGE_LEN);
+			}
+
+			close(new_socket_fd);
+			exit(0);
+		}
+		else
+		{
+			if(cpid<0)
+			{
+				perror("Could not create child D: !");			
+				exit(FAILED_CHILD);
+			}
+		}
+		//------------------------------</Child>--------------------
 	}
-	
 	
 	
 	printf("Server End\n");
