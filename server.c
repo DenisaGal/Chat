@@ -10,7 +10,7 @@ A simple server for the chat
 #include <netinet/ip.h>
 #include <stdlib.h>
 
-#define PORT 556 // some port for the server 
+#define PORT 5555 // some port for the server 
 #define backlog 3
 
 #define FAILED_SOCKET 1
