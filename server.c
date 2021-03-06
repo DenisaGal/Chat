@@ -9,6 +9,8 @@ A simple server for the chat
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #define PORT 5555 // some port for the server 
 #define backlog 3
@@ -79,7 +81,8 @@ int main()
 
 			bzero(message, MESSAGE_LEN);
 
-			while(int n = recv(new_socket_fd, message, sizeof(message),0)) > 0 )
+			int n;
+			while((n = recv(new_socket_fd, message, sizeof(message),0)) > 0 )
 			{
 				printf("Message from someone: %s", message);
 				//print here
