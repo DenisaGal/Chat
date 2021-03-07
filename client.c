@@ -37,7 +37,7 @@ void leave_chat(int signal){
 }
 
 void to_stdout(){
-	printf("%s", "-> ");
+	printf("\n%s", "-> ");
   	fflush(stdout);
 }
 
@@ -62,7 +62,7 @@ void send_message_routine(){
   		if(strcmp(message, "leave chat") == 0)
   			break;
   		else{
-  			sprintf(buff, "%s: %s", username, message);
+  			sprintf(buff, "%s: %s\n", username, message);
   			send(server_socket_fd, buff, strlen(buff), 0);
   		}
 
