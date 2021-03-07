@@ -41,7 +41,6 @@ pthread_mutex_t lock;
 /* Add clients to queue */
 void queue_add(client *cl)
 {
-	
 	pthread_mutex_lock(&lock);
 
 	for(int i=0; i < max_users; i++)
@@ -59,10 +58,22 @@ void queue_add(client *cl)
 
 void queue_remove(int uid) // remove clients from queue
 {
+	pthread_mutex_lock(&lock);
 	
+	for(int i=0; i < max_users; i++){
+		if(array[i]){
+			if(array[i]->uid == uid)
+			{
+				array[i] = NULL;
+				break;
+			}
+		}
+	}
+
+	pthread_mutex_unlock(&lock);
 }
 
-void send_message(char *s) //send messages to clients
+void send_message(char *s,int uid) //send messages to clients
 {
 	pthread_mutex_lock(&lock);
 	
@@ -72,12 +83,14 @@ void send_message(char *s) //send messages to clients
 		{
 			//printf("%s\n",s);
 			
-			if( send(array[i] -> sockfd , s , strlen(s) , 0) < 0)
+			if(uid != array[i] -> uid)
 			{
-				perror("error send");
-				exit(FAILED_WRITE);
+				if( send(array[i] -> sockfd , s , strlen(s) , 0) < 0)
+				{
+					perror("error send");
+					exit(FAILED_WRITE);
+				}
 			}
-			
 		}
 	}
 	
@@ -102,16 +115,31 @@ void *client_routine(void *arg)
 	char buff[MESSAGE_LEN];
 	bool leave_flag=false;
 	client *client_user = (client *)arg;
+	char username[username_len];
+	bzero(username,username_len);
+	/*  Check the username password etc  */ 
 	
-	/*  Check the username password etc  */
-	
+	if(recv(client_user ->sockfd ,username , username_len,0) <= 0 || strlen(username) <  2 || strlen(username) >= username_len -1)
+	{
+		printf("Invalid username\n"); // aici eventual faci un send la client ca e gresit contu or smth si clientu face receive la msg de eroare
+		leave_flag=true;
+	}
+	else
+	{
+		strcpy(client_user -> name, username);
+		sprintf(buff,"%s has joined the chat",client_user ->name);
+		printf("%s\n",buff);
+		send_message(buff,client_user ->uid);	
+	}
 	
 	/*****************************************/
 	
 	bzero(buff,MESSAGE_LEN);
 	
 	while(1)
-	{
+	{	
+		bzero(buff,MESSAGE_LEN);
+	
 		if (leave_flag == true) 
 		{
 			break;
@@ -120,18 +148,21 @@ void *client_routine(void *arg)
 		int msg_received=recv(client_user -> sockfd,buff,MESSAGE_LEN,0);
 		
 		add_nullchar(buff,MESSAGE_LEN);
-		//printf("%s\n",buff);
+		
 		if(msg_received > 0)
 		{	
-			send_message(buff);
+			send_message(buff,client_user ->uid);
 			add_nullchar(buff,MESSAGE_LEN);
 			printf("%s\n",buff);
 			
 		}
-		else if (msg_received == 0)
+		else if (msg_received == 0 || strcmp(buff,"leave chat") == 0 )
 		{
-			printf("Client has left");
+			
+			printf("%s has left the chat\n",client_user ->name);
 			leave_flag=true;
+			sprintf(buff,"%s has left the chat",client_user ->name);
+			send_message(buff, client_user ->uid );
 		}
 		else
 		{
