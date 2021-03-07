@@ -128,6 +128,8 @@ int main ()
     } 
     
     printf("Connected to server!\n");
+
+    send(server_socket_fd, username, strlen(username), 0);
     
     char message[MESSAGE_LEN];
     memset(message, '0', sizeof(memset));
