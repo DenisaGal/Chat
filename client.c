@@ -7,6 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
+#include <stdbool.h>
 
 #define PORT 5555 // some port for the server 
 #define backlog 3
@@ -19,21 +21,94 @@
 #define FAILED_CONNECTION 6
 #define FAILED_WRITE 7
 #define FAILED_READ 8
+#define FAILED_SEND 9
+#define FAILED_RECV 10
+#define FAILED_USERNAME 11
 
 #define MESSAGE_LEN 1024
+#define OUT 50
 
-/*
-Just an empty file for now 
-*/
+int server_socket_fd = 0;
+char username[20];
+bool leave_flag = false;
+
+void leave_chat(int signal){
+	leave_flag = true;
+}
+
+void to_stdout(){
+	printf("%s", "-> ");
+  	fflush(stdout);
+}
+
+void add_nullchar(char* arr, int length){ //adds  \0 at the end of the string 
+	int i=0;
+	  
+	while(arr[i]!='\n' && i<length){
+		i++;
+	}  
+	arr[i]='\0'; 
+}
+
+void send_message_routine(){
+	char message[MESSAGE_LEN] = {};
+	char buff[MESSAGE_LEN + 25] = {};
+
+	while(1){
+		to_stdout();
+  		fgets(message, MESSAGE_LEN, stdin);
+  		add_nullchar(message, MESSAGE_LEN);
+
+  		if(strcmp(message, "leave chat") == 0)
+  			break;
+  		else{
+  			sprintf(buff, "%s: %s", username, message);
+  			send(server_socket_fd, buff, strlen(buff), 0);
+  		}
+
+  		bzero(message, MESSAGE_LEN);
+    	bzero(buff, MESSAGE_LEN + 25);
+	}
+
+	leave_chat(OUT);
+}
+
+void receive_message_routine(){
+	char message[MESSAGE_LEN] = {};
+
+	while(1){
+		int receive = recv(server_socket_fd, message, MESSAGE_LEN, 0);
+
+		if(receive > 0){
+			printf("%s", message);
+			to_stdout();
+		}
+		else if(receive == 0)
+			break;
+
+		memset(message, 0, sizeof(message));
+	}
+}
 
 int main ()
 {
-	int server_socket_fd = socket (AF_INET,SOCK_STREAM,0); //creating socket for IPv4 protocol , TCP conection  
+	server_socket_fd = socket (AF_INET,SOCK_STREAM,0); //creating socket for IPv4 protocol , TCP conection  
 	
 	if(server_socket_fd < 0)
 	{
 		perror("socket failed");
 		exit(FAILED_SOCKET);
+	}
+
+	//Get username
+	printf("Enter your username please UwU: ");
+	fgets(username, 20, stdin);
+	add_nullchar(username, strlen(username));
+
+	//Check if name fits
+	if(strlen(username) > 20){
+		perror("Username must be less than 20 chars");
+		exit(FAILED_USERNAME);
 	}
 	
 	struct sockaddr_in server_address;
@@ -48,7 +123,7 @@ int main ()
 
     if (connect(server_socket_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) 
     { 
-        perror("Conection failed :(\n");
+        perror("Conection failed :(");
 		exit(FAILED_CONNECTION);
     } 
     
@@ -56,32 +131,55 @@ int main ()
     
     char message[MESSAGE_LEN];
     memset(message, '0', sizeof(memset));
+
+    pthread_t send_message;
+    pthread_t recieve_message;
+
+	if(pthread_create(&send_message, NULL, (void *) send_message_routine, NULL) != 0){
+		perror("Pthread");
+		exit(FAILED_SEND);
+	}
+
+
+  	if(pthread_create(&recieve_message, NULL, (void *) receive_message_routine, NULL) != 0){
+		perror("Pthread failed ");
+		exit(FAILED_RECV);
+	}
+
+	while(1){
+		if(leave_flag){
+			printf("ByeBye\n");
+			break;
+		}
+	}
     
-    while(1){
-    	printf("Write your message:\n");
-    	bzero(message, MESSAGE_LEN);
+    // while(1){
+    // 	printf("Write your message:\n");
+    // 	bzero(message, MESSAGE_LEN);
     	
-    	fgets(message, MESSAGE_LEN - 1, stdin);
+    // 	fgets(message, MESSAGE_LEN - 1, stdin);
     	
-    	//Send message to server
-    	//printf("\nSending to SERVER: %s ", message);
+    // 	//Send message to server
+    // 	//printf("\nSending to SERVER: %s ", message);
     	
-    	int n;
-    	if((n = send(server_socket_fd, message, strlen(message), 0)) < 0){
-    		perror("Error writing to server T_T\n");
-    		exit(FAILED_WRITE);
-    	}
+    // 	int n;
+    // 	if((n = send(server_socket_fd, message, strlen(message), 0)) < 0){
+    // 		perror("Error writing to server T_T\n");
+    // 		exit(FAILED_WRITE);
+    // 	}
     	
-    	/*//Read server response
-    	bzero(message, MESSAGE_LEN);
-    	if((n = recv(server_socket_fd, message, MESSAGE_LEN - 1, 0)) < 0){
-    		perror("Error readin from server :C\n");
-    		exit(FAILED_READ);	
-    	}
+    // 	/*//Read server response
+    // 	bzero(message, MESSAGE_LEN);
+    // 	if((n = recv(server_socket_fd, message, MESSAGE_LEN - 1, 0)) < 0){
+    // 		perror("Error reading from server :C\n");
+    // 		exit(FAILED_READ);	
+    // 	}
     	
-    	printf("\nReceived from server: %s", message);*/
+    // 	printf("\nReceived from server: %s", message);*/
     
-    }
+    // }
+
+    close(server_socket_fd);
 
 	return 0;
 }
