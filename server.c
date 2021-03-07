@@ -59,17 +59,7 @@ void queue_add(client *cl)
 
 void queue_remove(int uid) // remove clients from queue
 {
-	pthread_mutex_lock(&lock);
-
-	for(int i=0; i<max_users; i++)
-		if(array[i])
-			if(array[i]->uid == uid)
-			{
-				array[i]=NULL;
-				break;
-			}
-
-	pthread_mutex_unlock(&lock);
+	
 }
 
 void send_message(char *s) //send messages to clients
@@ -81,14 +71,12 @@ void send_message(char *s) //send messages to clients
 		if(array[i])
 		{
 			//printf("%s\n",s);
-
-			if(array[i]->uid != uid) 
-			//don't send it to the sender
-				if( send(array[i] -> sockfd , s , strlen(s) , 0) < 0)
-				{
-					perror("error send");
-					exit(FAILED_WRITE);
-				}
+			
+			if( send(array[i] -> sockfd , s , strlen(s) , 0) < 0)
+			{
+				perror("error send");
+				exit(FAILED_WRITE);
+			}
 			
 		}
 	}
@@ -117,22 +105,9 @@ void *client_routine(void *arg)
 	
 	/*  Check the username password etc  */
 	
-	char name[username_len];
-	if(recv(client_user->sockfd, name, username_len, 0) <=0)
-	{
-		printf("Please enter a valid name.");
-		leave_flag=true;
-	}
-	else
-	{
-
-		//Pasword check here **********************************************
-
-		strcpy(client_user->name, name);
-		sprintf(buff, "%s has joined the chat. Please welcome them.\n", client_user->name);
-		send_message(buff, client_user->uid);
-	}
-		
+	
+	/*****************************************/
+	
 	bzero(buff,MESSAGE_LEN);
 	
 	while(1)
@@ -141,22 +116,21 @@ void *client_routine(void *arg)
 		{
 			break;
 		}
-
+		
 		int msg_received=recv(client_user -> sockfd,buff,MESSAGE_LEN,0);
-		sprintf(buff, "\Sent by: %s\n", client_user->name);
 		
 		add_nullchar(buff,MESSAGE_LEN);
-
+		//printf("%s\n",buff);
 		if(msg_received > 0)
 		{	
 			send_message(buff);
 			add_nullchar(buff,MESSAGE_LEN);
-			printf("%s",buff);
+			printf("%s\n",buff);
 			
 		}
-		else if (msg_received == 0 || strcmp(buff, "exit_chat") == 0 )
+		else if (msg_received == 0)
 		{
-			printf("%s has left the chat.\n", client_user->name);
+			printf("Client has left");
 			leave_flag=true;
 		}
 		else
