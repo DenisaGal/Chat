@@ -22,7 +22,9 @@ A simple server for the chat
 #define FAILED_LISTEN 3
 #define FAILED_ACCEPT 4
 #define FAILED_RECV 5
+#define FAILED_WRITE 7
 
+#define max_users 10// max nr of users in chat 
 #define MESSAGE_LEN 1024
 #define username_len 20
 
@@ -33,23 +35,66 @@ typedef struct{
 	char name[username_len];
 } client; // structure of a client
 
+client *array[max_users];
+pthread_mutex_t lock;
 
-void send_message()
+/* Add clients to queue */
+void queue_add(client *cl)
+{
+	
+	pthread_mutex_lock(&lock);
+
+	for(int i=0; i < max_users; i++)
+	{
+		if(array[i] ==  NULL)
+		{
+			array[i] = cl;
+				break;
+		}
+	}
+
+	pthread_mutex_unlock(&lock);
+}
+
+
+void queue_remove(int uid) // remove clients from queue
 {
 	
 }
 
+void send_message(char *s) //send messages to clients
+{
+	pthread_mutex_lock(&lock);
+	
+	for(int i=0;i< max_users ; i++)
+	{
+		if(array[i])
+		{
+			//printf("%s\n",s);
+			
+			if( send(array[i] -> sockfd , s , strlen(s) , 0) < 0)
+			{
+				perror("error send");
+				exit(FAILED_WRITE);
+			}
+			
+		}
+	}
+	
+	pthread_mutex_unlock(&lock);
+}
+
 void add_nullchar (char* arr, int length) { //adds  \0 at the end of the string 
-  int i=0;
-  
-  while(arr[i]!='\n' && i<length)
-  {
-	  i++;
-  }
-  
-  arr[i]='\0';
-  
  
+	int i=0;
+	  
+	while(arr[i]!='\n' && i<length)
+	{
+		i++;
+	}
+  
+	arr[i]='\0';
+  
 }
 
 void *client_routine(void *arg)
@@ -73,18 +118,19 @@ void *client_routine(void *arg)
 		}
 		
 		int msg_received=recv(client_user -> sockfd,buff,MESSAGE_LEN,0);
-	
+		
 		add_nullchar(buff,MESSAGE_LEN);
 		//printf("%s\n",buff);
 		if(msg_received > 0)
-		{
+		{	
+			send_message(buff);
 			add_nullchar(buff,MESSAGE_LEN);
 			printf("%s\n",buff);
 			
 		}
 		else if (msg_received == 0)
 		{
-			printf("Client left");
+			printf("Client has left");
 			leave_flag=true;
 		}
 		else
@@ -94,7 +140,7 @@ void *client_routine(void *arg)
 		}
 	
 	}
-	
+	queue_remove(client_user->uid);
 	free(client_user);
 	pthread_detach(pthread_self());
 	
@@ -154,6 +200,8 @@ int main()
 		client_user->sockfd = new_socket_fd;
 		client_user->uid = uid;
 		uid=uid + 1;
+		
+		queue_add(client_user);
 		pthread_create(&thread_id,NULL,&client_routine,(void *)client_user);
 
 	}
