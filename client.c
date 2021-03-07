@@ -72,14 +72,14 @@ int main ()
     		exit(FAILED_WRITE);
     	}
     	
-    	//Read server response
+    	/*//Read server response
     	bzero(message, MESSAGE_LEN);
     	if((n = recv(server_socket_fd, message, MESSAGE_LEN - 1, 0)) < 0){
     		perror("Error readin from server :C\n");
     		exit(FAILED_READ);	
     	}
     	
-    	printf("\nReceived from server: %s", message);
+    	printf("\nReceived from server: %s", message);*/
     
     }
 

@@ -11,6 +11,8 @@ A simple server for the chat
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <stdbool.h>
 
 #define PORT 5555 // some port for the server 
 #define backlog 3
@@ -19,10 +21,85 @@ A simple server for the chat
 #define FAILED_BIND 2
 #define FAILED_LISTEN 3
 #define FAILED_ACCEPT 4
-#define FAILED_CHILD 5
+#define FAILED_RECV 5
 
 #define MESSAGE_LEN 1024
+#define username_len 20
 
+typedef struct{
+	struct sockaddr_in address;
+	int sockfd;
+	int uid;
+	char name[username_len];
+} client; // structure of a client
+
+
+void send_message()
+{
+	
+}
+
+void add_nullchar (char* arr, int length) { //adds  \0 at the end of the string 
+  int i=0;
+  
+  while(arr[i]!='\n' && i<length)
+  {
+	  i++;
+  }
+  
+  arr[i]='\0';
+  
+ 
+}
+
+void *client_routine(void *arg)
+{
+	char buff[MESSAGE_LEN];
+	bool leave_flag=false;
+	client *client_user = (client *)arg;
+	
+	/*  Check the username password etc  */
+	
+	
+	/*****************************************/
+	
+	bzero(buff,MESSAGE_LEN);
+	
+	while(1)
+	{
+		if (leave_flag == true) 
+		{
+			break;
+		}
+		
+		int msg_received=recv(client_user -> sockfd,buff,MESSAGE_LEN,0);
+	
+		add_nullchar(buff,MESSAGE_LEN);
+		//printf("%s\n",buff);
+		if(msg_received > 0)
+		{
+			add_nullchar(buff,MESSAGE_LEN);
+			printf("%s\n",buff);
+			
+		}
+		else if (msg_received == 0)
+		{
+			printf("Client left");
+			leave_flag=true;
+		}
+		else
+		{
+			perror("client recv ");
+			exit(FAILED_RECV);
+		}
+	
+	}
+	
+	free(client_user);
+	pthread_detach(pthread_self());
+	
+	return NULL;
+}
 
 int main()
 {
@@ -56,55 +133,29 @@ int main()
 	int adresslen = sizeof (server_address) ;
 	int new_socket_fd;
 
-	char message[MESSAGE_LEN];
-
-	while(new_socket_fd = accept(server_socket_fd, (struct sockaddr *) &server_address, (socklen_t *) &adresslen))
+	struct sockaddr_in client_address;
+	pthread_t thread_id;
+	int uid=1; // user id
+	
+	while(1)
 	//wait for a connection from the client
 	{
+		new_socket_fd = accept(server_socket_fd, (struct sockaddr *) &client_address, (socklen_t *) &adresslen);
+		
 		if(new_socket_fd < 0)
 		{	
 			perror("accept failed");			
 			exit(FAILED_ACCEPT); // client - server connection is the problem 
 		}
+		
+		client *client_user = (client *) malloc (sizeof (client));
+		
+		client_user->address = client_address;
+		client_user->sockfd = new_socket_fd;
+		client_user->uid = uid;
+		uid=uid + 1;
+		pthread_create(&thread_id,NULL,&client_routine,(void *)client_user);
 
-		//Concurrent server= we shall use a child process for each user
-		int cpid;
-
-		//------------------------------<Child>----------------------
-		if( (cpid=fork())==0 )
-		{
-			printf("Conexiune din partea clientului \n");
-			//Child has connected
-
-			close(server_socket_fd);
-			//child does not need to listen
-
-			bzero(message, MESSAGE_LEN);
-
-			int n;
-			while((n = recv(new_socket_fd, message, sizeof(message),0)) > 0 )
-			{
-				printf("Message from someone: %s", message);
-				//print here
-
-				send(new_socket_fd, message, strlen(message), 0);
-				//send to all
-
-				bzero(message, MESSAGE_LEN);
-			}
-
-			close(new_socket_fd);
-			exit(0);
-		}
-		else
-		{
-			if(cpid<0)
-			{
-				perror("Could not create child D: !");			
-				exit(FAILED_CHILD);
-			}
-		}
-		//------------------------------</Child>--------------------
 	}
 	
 	
