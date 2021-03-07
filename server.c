@@ -72,7 +72,7 @@ void queue_remove(int uid) // remove clients from queue
 	pthread_mutex_unlock(&lock);
 }
 
-void send_message(char *s) //send messages to clients
+void send_message(char *s , int uid) //send messages to clients
 {
 	pthread_mutex_lock(&lock);
 	
@@ -143,16 +143,15 @@ void *client_routine(void *arg)
 		}
 
 		int msg_received=recv(client_user -> sockfd,buff,MESSAGE_LEN,0);
-		sprintf(buff, "\Sent by: %s\n", client_user->name);
+		sprintf(buff, "Sent by: %s\n", client_user->name);
 		
 		add_nullchar(buff,MESSAGE_LEN);
 
 		if(msg_received > 0)
 		{	
-			send_message(buff);
+			send_message(buff,client_user->uid);
 			add_nullchar(buff,MESSAGE_LEN);
 			printf("%s",buff);
-			
 		}
 		else if (msg_received == 0 || strcmp(buff, "exit_chat") == 0 )
 		{
@@ -166,6 +165,7 @@ void *client_routine(void *arg)
 		}
 	
 	}
+	
 	queue_remove(client_user->uid);
 	free(client_user);
 	pthread_detach(pthread_self());
