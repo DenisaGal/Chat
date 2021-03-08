@@ -88,16 +88,11 @@ void send_message(char *s,int uid) //send messages to clients
 	{
 		if(array[i])
 		{
-			//printf("%s\n",s);
-			
-			//if(uid != array[i] -> uid)
-			//{
-				if( send(array[i] -> sockfd , s , strlen(s) , 0) < 0)
-				{
-					perror("error send");
-					exit(FAILED_WRITE);
-				}
-			//}
+			if( send(array[i] -> sockfd , s , strlen(s) , 0) < 0)
+			{
+				perror("error send");
+				exit(FAILED_WRITE);
+			}
 		}
 	}
 	
