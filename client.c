@@ -142,7 +142,7 @@ int main ()
 		
 	valid_credential = 0;
 	while(!valid_credential){
-		strcpy(password, getpass("Now choose a password: "));  //functie ca sa nu apara ce scrii in terminal
+		strcpy(password, getpass("Now type your password: "));  //functie ca sa nu apara ce scrii in terminal
 		add_nullchar(password, strlen(password));
 		if(strlen(password) > 20 || strlen(password) < 6 ){
 			printf("\nPassword must be between 6 and 20 characters!\n");
