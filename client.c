@@ -24,12 +24,14 @@
 #define FAILED_SEND 9
 #define FAILED_RECV 10
 #define FAILED_USERNAME 11
+#define FAILED_PASSWORD 12
 
 #define MESSAGE_LEN 1024
 #define OUT 50
 
 int server_socket_fd = 0;
 char username[20];
+char password[21];
 bool leave_flag = false;
 
 void leave_chat(int signal){
@@ -37,7 +39,7 @@ void leave_chat(int signal){
 }
 
 void to_stdout(){
-	printf("\n%s", "-> ");
+	printf("%s", "-> ");
   	fflush(stdout);
 }
 
@@ -62,7 +64,7 @@ void send_message_routine(){
   		if(strcmp(message, "leave chat") == 0)
   			break;
   		else{
-  			sprintf(buff, "%s: %s\n", username, message);
+  			sprintf(buff, "%s: %s\n\n", username, message);
   			send(server_socket_fd, buff, strlen(buff), 0);
   		}
 
@@ -106,11 +108,22 @@ int main ()
 	add_nullchar(username, strlen(username));
 
 	//Check if name fits
-	if(strlen(username) > 20){
-		perror("Username must be less than 20 chars");
+	if(strlen(username) > 20 || strlen(username) == 0){
+		perror("Username must be less than 20 characters and it can't be NULL!");
 		exit(FAILED_USERNAME);
 	}
 	
+	//Get password
+	printf("Now enter your password: ");
+	fgets(password, 20, stdin);
+	add_nullchar(password, strlen(password));
+
+	//Check if password is ok
+	if(strlen(password) > 20 || strlen(password) < 6 ){
+		perror("Password must be between 6 and 20 characters!");
+		exit(FAILED_PASSWORD);
+	}
+
 	struct sockaddr_in server_address;
 	server_address.sin_family = AF_INET; // IPv4
 	server_address.sin_port = htons(PORT); //our defined port
@@ -130,6 +143,7 @@ int main ()
     printf("Connected to server!\n");
 
     send(server_socket_fd, username, strlen(username), 0);
+    send(server_socket_fd, password, strlen(password), 0);
     
     char message[MESSAGE_LEN];
     memset(message, '0', sizeof(memset));
