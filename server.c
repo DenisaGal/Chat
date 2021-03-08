@@ -232,9 +232,9 @@ void *client_routine(void *arg)
 		
 		
 		if(logged_in)
-			send_message("ok", client_user ->uid);
+			send_message("ok\n", client_user ->uid);
 		else
-			send_message("err", client_user ->uid);
+			send_message("err\n", client_user ->uid);
 	}
 	
 	
@@ -243,7 +243,7 @@ void *client_routine(void *arg)
 	sprintf(buff,"%s has joined the chat\n",client_user -> name);
 	printf("%s\n",buff);
 	send_message(buff, client_user ->uid);
-	send_message("Logged in!\n", client_user -> uid);	
+	send_message("Logged in!", client_user -> uid);	
 	
 	
 	/*****************************************/
