@@ -13,6 +13,10 @@ A simple server for the chat
 #include <unistd.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <openssl/md5.h>
 
 #define PORT 5555 // some port for the server 
 #define backlog 3
@@ -23,10 +27,12 @@ A simple server for the chat
 #define FAILED_ACCEPT 4
 #define FAILED_RECV 5
 #define FAILED_WRITE 7
+#define FILE_ERROR 8
 
 #define max_users 10// max nr of users in chat 
 #define MESSAGE_LEN 1024
 #define username_len 20
+#define pwd_len 35
 
 typedef struct{
 	struct sockaddr_in address;
@@ -37,6 +43,7 @@ typedef struct{
 
 client *array[max_users];
 pthread_mutex_t lock;
+int file_descriptor;
 
 /* Add clients to queue */
 void queue_add(client *cl)
@@ -83,14 +90,14 @@ void send_message(char *s,int uid) //send messages to clients
 		{
 			//printf("%s\n",s);
 			
-			if(uid != array[i] -> uid)
-			{
+			//if(uid != array[i] -> uid)
+			//{
 				if( send(array[i] -> sockfd , s , strlen(s) , 0) < 0)
 				{
 					perror("error send");
 					exit(FAILED_WRITE);
 				}
-			}
+			//}
 		}
 	}
 	
@@ -110,27 +117,134 @@ void add_nullchar (char* arr, int length) { //adds  \0 at the end of the string
   
 }
 
+char md5hash[33];
+char* hash(char pwd[pwd_len]){
+	unsigned char digest[MD5_DIGEST_LENGTH];
+	MD5_CTX context;
+	MD5_Init(&context);
+	MD5_Update(&context, pwd, strlen(pwd));
+	MD5_Final(digest, &context);
+	
+	
+	for(int i = 0; i < 16; ++i)
+		sprintf(&md5hash[i*2], "%02x", (unsigned int)digest[i]);
+			
+	return md5hash;
+}
+
+int username_exists(char username[username_len]){
+	FILE *file_stream;
+	if((file_stream = fopen("database", "r")) == NULL){
+		perror("Opening stream");
+		exit(FILE_ERROR);
+	}
+	
+	fseek(file_stream, 0, SEEK_SET);
+	
+	char *line = NULL;
+	size_t len = 0;
+	
+	while(getline(&line, &len, file_stream) != -1){
+		add_nullchar(line, len);
+		
+		if(strcmp(username, line) == 0)
+			return 1;
+			
+		getline(&line, &len, file_stream); //next line is pwd and we don't need it
+	}
+	
+	fclose(file_stream);
+	return 0;
+}
+
+int credentials_match(char username[username_len], char password[pwd_len]){
+	FILE *file_stream;
+	if((file_stream = fopen("database", "r")) == NULL){
+		perror("Opening stream");
+		exit(FILE_ERROR);
+	}
+	
+	fseek(file_stream, 0, SEEK_SET);
+	
+	char *line = NULL;
+	size_t len = 0;
+	
+	while(getline(&line, &len, file_stream) != -1){
+		add_nullchar(line, len);
+		
+		if(strcmp(username, line) == 0){
+			getline(&line, &len, file_stream); //get pwd
+			add_nullchar(line, len);
+			
+			if(strcmp(password, line) == 0)
+				return 1;
+			else
+				return 0;
+		}
+	}
+	
+	fclose(file_stream);
+	return 1;
+}
+
 void *client_routine(void *arg)
 {
 	char buff[MESSAGE_LEN];
-	bool leave_flag=false;
+	bool leave_flag = false;
 	client *client_user = (client *)arg;
 	char username[username_len];
-	bzero(username,username_len);
-	/*  Check the username password etc  */ 
+	char password[pwd_len];
+	int logged_in = 0;
 	
-	if(recv(client_user ->sockfd ,username , username_len,0) <= 0 || strlen(username) <  2 || strlen(username) >= username_len -1)
-	{
-		printf("Invalid username\n"); // aici eventual faci un send la client ca e gresit contu or smth si clientu face receive la msg de eroare
-		leave_flag=true;
+	/*  Check the username password etc  */ 
+	while(!logged_in){
+		bzero(username, username_len);
+		bzero(password, pwd_len);
+		
+		if(recv(client_user ->sockfd, username, username_len, 0) <= 0 ){
+			printf("Username fail\n"); 
+			leave_flag = true;
+		}
+		
+		if(recv(client_user ->sockfd, password, pwd_len, 0) <= 0 ){
+			printf("Password fail\n"); 
+			leave_flag = true;
+		}
+		
+		//ok aici am username si parola yay
+		//printf("username: %s, password: %s\n", username, password); 
+		
+		//daca e user nou il bagam in database
+		if(!username_exists(username)){
+			logged_in = 1;
+			char credentials[100];
+			snprintf(credentials, sizeof(credentials), "%s\n%s\n", username, password);
+			if(write(file_descriptor, credentials, strlen(credentials)) < 0){
+				perror("write");
+				exit(FILE_ERROR);	
+			}
+		}
+		else{		
+			//cauta username-ul in database si verifica sa fie match cu parola
+			if(credentials_match(username, password))
+				logged_in = 1;
+		}
+		
+		
+		if(logged_in)
+			send_message("ok", client_user ->uid);
+		else
+			send_message("err", client_user ->uid);
 	}
-	else
-	{
-		strcpy(client_user -> name, username);
-		sprintf(buff,"%s has joined the chat",client_user ->name);
-		printf("%s\n",buff);
-		send_message(buff,client_user ->uid);	
-	}
+	
+	
+	//logged in
+	strcpy(client_user -> name, username);
+	sprintf(buff,"%s has joined the chat\n",client_user -> name);
+	printf("%s\n",buff);
+	send_message(buff, client_user ->uid);
+	send_message("Logged in!\n", client_user -> uid);	
+	
 	
 	/*****************************************/
 	
@@ -162,7 +276,7 @@ void *client_routine(void *arg)
 			printf("%s has left the chat\n",client_user ->name);
 			leave_flag=true;
 			sprintf(buff,"%s has left the chat",client_user ->name);
-			send_message(buff, client_user ->uid );
+			send_message(buff, client_user -> uid );
 		}
 		else
 		{
@@ -171,6 +285,7 @@ void *client_routine(void *arg)
 		}
 	
 	}
+	
 	queue_remove(client_user->uid);
 	free(client_user);
 	pthread_detach(pthread_self());
@@ -180,6 +295,17 @@ void *client_routine(void *arg)
 
 int main()
 {
+	/*************** DATABASE FILE **************/
+	
+	if((file_descriptor = open("database", O_WRONLY | O_APPEND | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO)) < 0){
+		perror("Opening file");
+		exit(FILE_ERROR);
+	}
+	
+	
+	/*************** DATABASE FILE **************/
+	
+
 	int server_socket_fd = socket (AF_INET,SOCK_STREAM,0); //creating socket for IPv4 protocol , TCP conection  
 	
 	if(server_socket_fd < 0)
@@ -239,6 +365,7 @@ int main()
 	
 	
 	printf("Server End\n");
+	close(file_descriptor);
 	
 	return 0;
 }
