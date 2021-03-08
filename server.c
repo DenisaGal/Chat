@@ -232,9 +232,9 @@ void *client_routine(void *arg)
 		
 		
 		if(logged_in)
-			send_message("ok", client_user ->uid);
+			send_message("ok\n", client_user ->uid);
 		else
-			send_message("err", client_user ->uid);
+			send_message("err\n", client_user ->uid);
 	}
 	
 	
