@@ -215,33 +215,7 @@ int main ()
 			break;
 		}
 	}
-    
-    // while(1){
-    // 	printf("Write your message:\n");
-    // 	bzero(message, MESSAGE_LEN);
-    	
-    // 	fgets(message, MESSAGE_LEN - 1, stdin);
-    	
-    // 	//Send message to server
-    // 	//printf("\nSending to SERVER: %s ", message);
-    	
-    // 	int n;
-    // 	if((n = send(server_socket_fd, message, strlen(message), 0)) < 0){
-    // 		perror("Error writing to server T_T\n");
-    // 		exit(FAILED_WRITE);
-    // 	}
-    	
-    // 	/*//Read server response
-    // 	bzero(message, MESSAGE_LEN);
-    // 	if((n = recv(server_socket_fd, message, MESSAGE_LEN - 1, 0)) < 0){
-    // 		perror("Error reading from server :C\n");
-    // 		exit(FAILED_READ);	
-    // 	}
-    	
-    // 	printf("\nReceived from server: %s", message);*/
-    
-    // }
-
+   
     close(server_socket_fd);
 
 	return 0;

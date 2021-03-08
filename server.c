@@ -243,7 +243,7 @@ void *client_routine(void *arg)
 	sprintf(buff,"%s has joined the chat\n",client_user -> name);
 	printf("%s\n",buff);
 	send_message(buff, client_user ->uid);
-	send_message("Logged in!\n", client_user -> uid);	
+	send_message("Logged in!", client_user -> uid);	
 	
 	
 	/*****************************************/
