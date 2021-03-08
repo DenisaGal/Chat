@@ -85,7 +85,7 @@ void receive_message_routine(){
 		int receive = recv(server_socket_fd, message, MESSAGE_LEN, 0);
 
 		if(receive > 0){
-			printf("%s", message);
+			printf("%s\n", message);
 			to_stdout();
 		}
 		else if(receive == 0)
