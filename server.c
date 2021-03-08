@@ -27,6 +27,7 @@ A simple server for the chat
 #define max_users 10// max nr of users in chat 
 #define MESSAGE_LEN 1024
 #define username_len 20
+#define pwd_len 20
 
 typedef struct{
 	struct sockaddr_in address;
@@ -113,24 +114,43 @@ void add_nullchar (char* arr, int length) { //adds  \0 at the end of the string
 void *client_routine(void *arg)
 {
 	char buff[MESSAGE_LEN];
-	bool leave_flag=false;
+	bool leave_flag = false;
 	client *client_user = (client *)arg;
 	char username[username_len];
-	bzero(username,username_len);
-	/*  Check the username password etc  */ 
+	char password[pwd_len];
+	int logged_in = 0;
 	
-	if(recv(client_user ->sockfd ,username , username_len,0) <= 0 || strlen(username) <  2 || strlen(username) >= username_len -1)
-	{
-		printf("Invalid username\n"); // aici eventual faci un send la client ca e gresit contu or smth si clientu face receive la msg de eroare
-		leave_flag=true;
+	/*  Check the username password etc  */ 
+	while(!logged_in){
+		bzero(username, username_len);
+		bzero(password, pwd_len);
+		
+		if(recv(client_user ->sockfd, username, username_len, 0) <= 0 ){
+			printf("Username fail\n"); 
+			leave_flag = true;
+		}
+		
+		if(recv(client_user ->sockfd, password, pwd_len, 0) <= 0 ){
+			printf("Password fail\n"); 
+			leave_flag = true;
+		}
+		
+		//ok aici am username si parola yay
+		//printf("username: %s, password: %s\n", username, password); 
+		
+		
+		//aici va fi conditia pe bune
+		if(strcmp(username, password) == 0)
+			logged_in = 1;
+		
 	}
-	else
-	{
-		strcpy(client_user -> name, username);
-		sprintf(buff,"%s has joined the chat",client_user ->name);
-		printf("%s\n",buff);
-		send_message(buff,client_user ->uid);	
-	}
+	
+	
+	strcpy(client_user -> name, username);
+	sprintf(buff,"%s has joined the chat\n",client_user ->name);
+	printf("%s\n",buff);
+	send_message(buff,client_user ->uid);	
+	
 	
 	/*****************************************/
 	

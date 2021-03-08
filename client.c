@@ -102,27 +102,8 @@ int main ()
 		exit(FAILED_SOCKET);
 	}
 
-	//Get username
-	printf("Enter your username please UwU: ");
-	fgets(username, 20, stdin);
-	add_nullchar(username, strlen(username));
-
-	//Check if name fits
-	if(strlen(username) > 20 || strlen(username) == 0){
-		perror("Username must be less than 20 characters and it can't be NULL!");
-		exit(FAILED_USERNAME);
-	}
 	
-	//Get password
-	printf("Now enter your password: ");
-	fgets(password, 20, stdin);
-	add_nullchar(password, strlen(password));
-
-	//Check if password is ok
-	if(strlen(password) > 20 || strlen(password) < 6 ){
-		perror("Password must be between 6 and 20 characters!");
-		exit(FAILED_PASSWORD);
-	}
+	
 
 	struct sockaddr_in server_address;
 	server_address.sin_family = AF_INET; // IPv4
@@ -141,9 +122,40 @@ int main ()
     } 
     
     printf("Connected to server!\n");
-
-    send(server_socket_fd, username, strlen(username), 0);
-    send(server_socket_fd, password, strlen(password), 0);
+    
+    
+	printf("Enter your username please UwU: ");
+	int valid_credential = 0;
+	while(!valid_credential){
+		fgets(username, 20, stdin);
+		add_nullchar(username, strlen(username));
+		if(strlen(username) > 20 || strlen(username) == 0){
+			printf("\nInvalid username, choose a non-null one, with less than 20 characters :)\n");
+			continue;
+		}
+		
+		valid_credential = 1;
+	}
+		
+	send(server_socket_fd, username, strlen(username), 0);
+		
+		
+	valid_credential = 0;
+	while(!valid_credential){
+		strcpy(password, getpass("Now choose a password: "));  //functie ca sa nu apara ce scrii in terminal
+		add_nullchar(password, strlen(password));
+		if(strlen(password) > 20 || strlen(password) < 6 ){
+			printf("\nPassword must be between 6 and 20 characters!\n");
+			continue;
+		}
+		
+		valid_credential = 1;
+	}
+		
+    	send(server_socket_fd, password, strlen(password), 0);	
+    
+	printf("\nLogging in..\n");
+	
     
     char message[MESSAGE_LEN];
     memset(message, '0', sizeof(memset));
