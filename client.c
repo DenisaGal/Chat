@@ -177,19 +177,21 @@ int main ()
     		
 		
     		char login_msg[15];
-    		bzero(login_msg, 15);
+		memset(login_msg, '\0', 10);
     		if(recv(server_socket_fd, login_msg, 2, 0) <= 0 ){
 			printf("Login message not received\n"); 
 			return -1;
 		}
 		add_nullchar(login_msg, strlen(login_msg));
+		//printf("\nLogin message: %s\n", login_msg); 
 		if(strcmp(login_msg, "ok") == 0)
 			logged_in = 1;
+		else if(strcmp(login_msg, "e1") == 0)
+			printf("\n%s\n", "This user is already logged in at the moment.."); 
 		else
 			printf("\nIf you already have an account, that password was wrong.\nIf you're new, that username is taken.\n");
     	}
     	
-	printf("\nLogging in..\n");
 	
     
     char message[MESSAGE_LEN];

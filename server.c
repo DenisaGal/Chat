@@ -187,6 +187,15 @@ int credentials_match(char username[username_len], char password[pwd_len]){
 	return 1;
 }
 
+int is_already_connected(char username[username_len]){
+	for(int i = 0; i < max_users; i++)
+		if(array[i])
+			if(strcmp(array[i]->name, username) == 0)
+				return 1;
+		
+	return 0;
+}
+
 void *client_routine(void *arg)
 {
 	char buff[MESSAGE_LEN];
@@ -211,8 +220,11 @@ void *client_routine(void *arg)
 			leave_flag = true;
 		}
 		
-		//ok aici am username si parola yay
-		//printf("username: %s, password: %s\n", username, password); 
+		//can't login at the same time with the same user again
+		if(is_already_connected(username)){
+			send(client_user -> sockfd, "e1" , 2, 0);
+			continue;
+		}
 		
 		//daca e user nou il bagam in database
 		if(!username_exists(username)){
@@ -230,11 +242,13 @@ void *client_routine(void *arg)
 				logged_in = 1;
 		}
 		
-		
+		char log_msg[10];
+		memset(log_msg, '\0', 10);
 		if(logged_in)
-			send_message("ok\n", client_user ->uid);
+			sprintf(log_msg, "%s", "ok");			
 		else
-			send_message("err\n", client_user ->uid);
+			sprintf(log_msg, "%s", "e2");
+		send(client_user -> sockfd, log_msg , strlen(log_msg), 0);
 	}
 	
 	
@@ -243,7 +257,6 @@ void *client_routine(void *arg)
 	sprintf(buff,"%s has joined the chat\n",client_user -> name);
 	printf("%s\n",buff);
 	send_message(buff, client_user ->uid);
-	send_message("Logged in!", client_user -> uid);	
 	
 	
 	/*****************************************/
