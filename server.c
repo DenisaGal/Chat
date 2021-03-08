@@ -90,14 +90,14 @@ void send_message(char *s,int uid) //send messages to clients
 		{
 			//printf("%s\n",s);
 			
-			if(uid != array[i] -> uid)
-			{
+			//if(uid != array[i] -> uid)
+			//{
 				if( send(array[i] -> sockfd , s , strlen(s) , 0) < 0)
 				{
 					perror("error send");
 					exit(FAILED_WRITE);
 				}
-			}
+			//}
 		}
 	}
 	
@@ -214,13 +214,21 @@ void *client_routine(void *arg)
 			if(credentials_match(username, password))
 				logged_in = 1;
 		}
+		
+		
+		if(logged_in)
+			send_message("ok", client_user ->uid);
+		else
+			send_message("err", client_user ->uid);
 	}
 	
 	
+	//logged in
 	strcpy(client_user -> name, username);
-	sprintf(buff,"%s has joined the chat\n",client_user ->name);
+	sprintf(buff,"%s has joined the chat\n",client_user -> name);
 	printf("%s\n",buff);
-	send_message(buff,client_user ->uid);	
+	send_message(buff, client_user ->uid);
+	send_message("Logged in!", client_user -> uid);	
 	
 	
 	/*****************************************/
@@ -253,7 +261,7 @@ void *client_routine(void *arg)
 			printf("%s has left the chat\n",client_user ->name);
 			leave_flag=true;
 			sprintf(buff,"%s has left the chat",client_user ->name);
-			send_message(buff, client_user ->uid );
+			send_message(buff, client_user -> uid );
 		}
 		else
 		{
@@ -262,6 +270,7 @@ void *client_routine(void *arg)
 		}
 	
 	}
+	
 	queue_remove(client_user->uid);
 	free(client_user);
 	pthread_detach(pthread_self());

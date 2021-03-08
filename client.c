@@ -28,10 +28,12 @@
 
 #define MESSAGE_LEN 1024
 #define OUT 50
+#define username_len 20
+#define pwd_len 20
 
 int server_socket_fd = 0;
-char username[20];
-char password[21];
+char username[username_len];
+char password[pwd_len];
 bool leave_flag = false;
 
 void leave_chat(int signal){
@@ -69,7 +71,7 @@ void send_message_routine(){
   		}
 
   		bzero(message, MESSAGE_LEN);
-    	bzero(buff, MESSAGE_LEN + 25);
+    		bzero(buff, MESSAGE_LEN + 25);
 	}
 
 	leave_chat(OUT);
@@ -103,8 +105,6 @@ int main ()
 	}
 
 	
-	
-
 	struct sockaddr_in server_address;
 	server_address.sin_family = AF_INET; // IPv4
 	server_address.sin_port = htons(PORT); //our defined port
@@ -124,36 +124,55 @@ int main ()
     printf("Connected to server!\n");
     
     
-	printf("Enter your username please UwU: ");
-	int valid_credential = 0;
-	while(!valid_credential){
-		fgets(username, 20, stdin);
-		add_nullchar(username, strlen(username));
-		if(strlen(username) > 20 || strlen(username) == 0){
-			printf("\nInvalid username, choose a non-null one, with less than 20 characters :)\n");
-			continue;
+    int logged_in = 0;
+	while(!logged_in){
+		bzero(username, username_len);
+		bzero(password, pwd_len);
+	
+		printf("Enter your username please UwU: ");
+		int valid_username = 0;
+		while(!valid_username){
+			fgets(username, 20, stdin);
+			add_nullchar(username, strlen(username));
+			if(strlen(username) > 20 || strlen(username) == 0){
+				printf("\nInvalid username, choose a non-null one, with less than 20 characters :)\n");
+				continue;
+			}
+			
+			valid_username = 1;
+		}
+			
+		send(server_socket_fd, username, strlen(username), 0);
+			
+			
+		int valid_password = 0;
+		while(!valid_password){
+			strcpy(password, getpass("Now type your password: "));  //functie ca sa nu apara ce scrii in terminal
+			add_nullchar(password, strlen(password));
+			if(strlen(password) > 20 || strlen(password) < 6 ){
+				printf("\nPassword must be between 6 and 20 characters!\n");
+				continue;
+			}
+			
+			valid_password = 1;
 		}
 		
-		valid_credential = 1;
-	}
+    		send(server_socket_fd, password, strlen(password), 0);
+    		
 		
-	send(server_socket_fd, username, strlen(username), 0);
-		
-		
-	valid_credential = 0;
-	while(!valid_credential){
-		strcpy(password, getpass("Now type your password: "));  //functie ca sa nu apara ce scrii in terminal
-		add_nullchar(password, strlen(password));
-		if(strlen(password) > 20 || strlen(password) < 6 ){
-			printf("\nPassword must be between 6 and 20 characters!\n");
-			continue;
-		}
-		
-		valid_credential = 1;
-	}
-		
-    	send(server_socket_fd, password, strlen(password), 0);	
-    
+    		char login_msg[15];
+    		bzero(login_msg, 15);
+    		if(recv(server_socket_fd, login_msg, 3, 0) <= 0 ){
+			printf("Login message not received\n"); 
+			return -1;
+		}	
+		add_nullchar(login_msg, strlen(login_msg));
+		if(strcmp(login_msg, "ok") == 0)
+			logged_in = 1;
+		else
+			printf("\nIf you already have an account, that password was wrong.\nIf you're new, that username is taken.\n");
+    	}
+    	
 	printf("\nLogging in..\n");
 	
     
