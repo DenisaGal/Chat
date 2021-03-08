@@ -147,7 +147,7 @@ int main ()
 	
 		int valid_username = 0;
 		while(!valid_username){
-			printf("Enter your username please UwU: ");
+			printf("Enter your username please: ");
 			fgets(username, 20, stdin);
 			add_nullchar(username, strlen(username));
 			if(strlen(username) > 20 || strlen(username) == 0){
@@ -183,7 +183,6 @@ int main ()
 			return -1;
 		}
 		add_nullchar(login_msg, strlen(login_msg));
-		//printf("\nLogin message: %s\n", login_msg); 
 		if(strcmp(login_msg, "ok") == 0)
 			logged_in = 1;
 		else if(strcmp(login_msg, "e1") == 0)
