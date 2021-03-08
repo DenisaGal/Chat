@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <openssl/md5.h>
 
 #define PORT 5555 // some port for the server 
 #define backlog 3
@@ -29,7 +30,7 @@
 #define MESSAGE_LEN 1024
 #define OUT 50
 #define username_len 20
-#define pwd_len 20
+#define pwd_len 35
 
 int server_socket_fd = 0;
 char username[username_len];
@@ -94,6 +95,21 @@ void receive_message_routine(){
 	}
 }
 
+char md5hash[33];
+char* hash(char pwd[pwd_len]){
+	unsigned char digest[MD5_DIGEST_LENGTH];
+	MD5_CTX context;
+	MD5_Init(&context);
+	MD5_Update(&context, pwd, strlen(pwd));
+	MD5_Final(digest, &context);
+	
+	
+	for(int i = 0; i < 16; ++i)
+		sprintf(&md5hash[i*2], "%02x", (unsigned int)digest[i]);
+		
+	return md5hash;
+}
+
 int main ()
 {
 	server_socket_fd = socket (AF_INET,SOCK_STREAM,0); //creating socket for IPv4 protocol , TCP conection  
@@ -129,9 +145,9 @@ int main ()
 		bzero(username, username_len);
 		bzero(password, pwd_len);
 	
-		printf("Enter your username please UwU: ");
 		int valid_username = 0;
 		while(!valid_username){
+			printf("Enter your username please UwU: ");
 			fgets(username, 20, stdin);
 			add_nullchar(username, strlen(username));
 			if(strlen(username) > 20 || strlen(username) == 0){
@@ -157,15 +173,15 @@ int main ()
 			valid_password = 1;
 		}
 		
-    		send(server_socket_fd, password, strlen(password), 0);
+    		send(server_socket_fd, hash(password), strlen(password), 0);
     		
 		
     		char login_msg[15];
     		bzero(login_msg, 15);
-    		if(recv(server_socket_fd, login_msg, 3, 0) <= 0 ){
+    		if(recv(server_socket_fd, login_msg, 2, 0) <= 0 ){
 			printf("Login message not received\n"); 
 			return -1;
-		}	
+		}
 		add_nullchar(login_msg, strlen(login_msg));
 		if(strcmp(login_msg, "ok") == 0)
 			logged_in = 1;

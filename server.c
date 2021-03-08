@@ -16,7 +16,7 @@ A simple server for the chat
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
+#include <openssl/md5.h>
 
 #define PORT 5555 // some port for the server 
 #define backlog 3
@@ -32,7 +32,7 @@ A simple server for the chat
 #define max_users 10// max nr of users in chat 
 #define MESSAGE_LEN 1024
 #define username_len 20
-#define pwd_len 20
+#define pwd_len 35
 
 typedef struct{
 	struct sockaddr_in address;
@@ -115,6 +115,21 @@ void add_nullchar (char* arr, int length) { //adds  \0 at the end of the string
   
 	arr[i]='\0';
   
+}
+
+char md5hash[33];
+char* hash(char pwd[pwd_len]){
+	unsigned char digest[MD5_DIGEST_LENGTH];
+	MD5_CTX context;
+	MD5_Init(&context);
+	MD5_Update(&context, pwd, strlen(pwd));
+	MD5_Final(digest, &context);
+	
+	
+	for(int i = 0; i < 16; ++i)
+		sprintf(&md5hash[i*2], "%02x", (unsigned int)digest[i]);
+			
+	return md5hash;
 }
 
 int username_exists(char username[username_len]){
@@ -228,7 +243,7 @@ void *client_routine(void *arg)
 	sprintf(buff,"%s has joined the chat\n",client_user -> name);
 	printf("%s\n",buff);
 	send_message(buff, client_user ->uid);
-	send_message("Logged in!", client_user -> uid);	
+	send_message("Logged in!\n", client_user -> uid);	
 	
 	
 	/*****************************************/
