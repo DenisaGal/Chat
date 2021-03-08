@@ -13,6 +13,10 @@ A simple server for the chat
 #include <unistd.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 #define PORT 5555 // some port for the server 
 #define backlog 3
@@ -23,6 +27,7 @@ A simple server for the chat
 #define FAILED_ACCEPT 4
 #define FAILED_RECV 5
 #define FAILED_WRITE 7
+#define FILE_ERROR 8
 
 #define max_users 10// max nr of users in chat 
 #define MESSAGE_LEN 1024
@@ -38,6 +43,7 @@ typedef struct{
 
 client *array[max_users];
 pthread_mutex_t lock;
+int file_descriptor;
 
 /* Add clients to queue */
 void queue_add(client *cl)
@@ -138,6 +144,10 @@ void *client_routine(void *arg)
 		//ok aici am username si parola yay
 		//printf("username: %s, password: %s\n", username, password); 
 		
+		char credentials[100];
+		snprintf(credentials, sizeof(credentials), "%s\n%s\n", username, password);
+		write(file_descriptor, credentials, strlen(credentials));
+		
 		
 		//aici va fi conditia pe bune
 		if(strcmp(username, password) == 0)
@@ -200,6 +210,17 @@ void *client_routine(void *arg)
 
 int main()
 {
+	/*************** DATABASE FILE **************/
+	
+	if((file_descriptor = open("database", O_WRONLY | O_APPEND | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO)) < 0){
+		perror("Opening file");
+		exit(FILE_ERROR);
+	}
+	
+	
+	/*************** DATABASE FILE **************/
+	
+
 	int server_socket_fd = socket (AF_INET,SOCK_STREAM,0); //creating socket for IPv4 protocol , TCP conection  
 	
 	if(server_socket_fd < 0)
