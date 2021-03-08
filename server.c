@@ -117,6 +117,36 @@ void add_nullchar (char* arr, int length) { //adds  \0 at the end of the string
   
 }
 
+int username_exists(char username[username_len]){
+	FILE *file_stream;
+	if((file_stream = fopen("database", "r")) == NULL){
+		perror("Opening stream");
+		exit(FILE_ERROR);
+	}
+	
+	fseek(file_stream, 0, SEEK_SET);
+	
+	char *line = NULL;
+	size_t len = 0;
+	
+	while(getline(&line, &len, file_stream) != -1){
+		add_nullchar(line, len);
+		
+		if(strcmp(username, line) == 0)
+			return 1;
+			
+		getline(&line, &len, file_stream); //next line is pwd and we don't need it
+	}
+	
+	
+	fclose(file_stream);
+	return 0;
+}
+
+int credentials_match(char username[username_len], char password[pwd_len]){
+
+}
+
 void *client_routine(void *arg)
 {
 	char buff[MESSAGE_LEN];
@@ -144,13 +174,19 @@ void *client_routine(void *arg)
 		//ok aici am username si parola yay
 		//printf("username: %s, password: %s\n", username, password); 
 		
-		char credentials[100];
-		snprintf(credentials, sizeof(credentials), "%s\n%s\n", username, password);
-		write(file_descriptor, credentials, strlen(credentials));
+		//daca e user nou il bagam in database
+		if(!username_exists(username)){
+			char credentials[100];
+			snprintf(credentials, sizeof(credentials), "%s\n%s\n", username, password);
+			if(write(file_descriptor, credentials, strlen(credentials)) < 0){
+				perror("write");
+				exit(FILE_ERROR);	
+			}
+		}
+				
 		
-		
-		//aici va fi conditia pe bune
-		if(strcmp(username, password) == 0)
+		//cauta username-ul in database si verifica sa fie match cu parola
+		if(credentials_match(username, password))
 			logged_in = 1;
 		
 	}
@@ -158,7 +194,7 @@ void *client_routine(void *arg)
 	
 	strcpy(client_user -> name, username);
 	sprintf(buff,"%s has joined the chat\n",client_user ->name);
-	printf("%s\n",buff);
+	printf("%s",buff);
 	send_message(buff,client_user ->uid);	
 	
 	
@@ -280,6 +316,7 @@ int main()
 	
 	
 	printf("Server End\n");
+	close(file_descriptor);
 	
 	return 0;
 }
